@@ -705,15 +705,15 @@ const SpreadsheetPreview: React.FC = () => {
 
   return (
     <div className="spreadsheet-container flex h-screen w-full bg-white">
-      {/* Toast notification */}
-      {showToast && (
-        <div className="fixed top-4 right-4 bg-gray-200 text-gray-800 px-3 py-2 rounded shadow-lg z-50">
-          {showToast}
-        </div>
-      )}
+            {/* Toast notification */}
+        {showToast && (
+          <div className="fixed top-4 right-4 bg-gray-200 text-gray-800 px-3 py-2 rounded shadow-lg z-50">
+            {showToast}
+          </div>
+        )}
       
       {/* Main spreadsheet area */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="border-b p-3 flex justify-between items-center bg-white">
           <div className="flex gap-2">

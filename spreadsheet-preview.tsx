@@ -49,7 +49,9 @@ const handleArrowNavigation = (e) => {
   }
   
   e.preventDefault();
-};import React, { useState, useRef, useEffect } from 'react';
+};
+
+import React, { useState, useRef, useEffect } from 'react';
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, FileSpreadsheet, MessageSquare, Send, X } from 'lucide-react';
 
 const WorkingSpreadsheet = () => {
@@ -665,18 +667,17 @@ const ColorPalette = ({ onSelectColor, onClose, forText = false }) => {
 };
 
 return (
-  <div className="flex h-screen w-full bg-white">
+  <div className="spreadsheet-container flex h-screen w-full bg-white overflow-hidden">
     {/* Toast notification */}
     {showToast && (
-      <div className="fixed top-4 right-4 bg-gray-800 text-white px-3 py-2 rounded shadow-lg z-50">
+      <div className="fixed top-4 right-4 bg-gray-200 text-gray-800 px-3 py-2 rounded shadow-lg z-50">
         {showToast}
       </div>
     )}
     
-    {/* Main spreadsheet area */}
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b p-3 flex justify-between">
+      <div className="border-b p-3 flex justify-between items-center bg-white sticky top-0 z-20">
         <div className="flex gap-2">
           <button className="px-3 py-1 rounded hover:bg-gray-100 flex items-center">
             <FileSpreadsheet size={16} className="mr-1" />
@@ -726,7 +727,7 @@ return (
       </div>
       
       {/* Toolbar */}
-      <div className="border-b p-2 flex flex-wrap gap-1">
+      <div className="border-b p-2 flex flex-wrap gap-1 bg-white sticky top-0 z-20">
         {/* Text styles */}
         <div className="flex border-r pr-2 mr-2">
           <button 
@@ -887,18 +888,18 @@ return (
       </div>
       
       {/* Formula Bar */}
-      <div className="border-b p-2 flex items-center gap-2 bg-white">
-        <span className="text-sm font-medium text-gray-500">fx</span>
+      <div className="formula-bar border-b p-2 flex items-center gap-2 bg-white">
+        <span className="formula-bar-label text-sm font-medium text-gray-500">fx</span>
         <input 
           placeholder="Formula" 
-          className="h-8 text-sm border border-gray-300 rounded px-2 py-1 w-full"
+          className="formula-bar-input h-8 text-sm border border-gray-300 rounded px-2 py-1 w-full"
         />
       </div>
       
       {/* Spreadsheet grid */}
       <div className="flex-1 overflow-auto">
-        <table className="border-collapse w-full">
-          <thead>
+        <table className="spreadsheet-table border-collapse w-full">
+          <thead className="spreadsheet-header">
             <tr>
               <th className="w-10 h-8 bg-gray-100 border-r border-b"></th>
               {Array(26).fill().map((_, i) => (
@@ -911,7 +912,7 @@ return (
           <tbody>
             {Array(20).fill().map((_, rowIndex) => (
               <tr key={rowIndex}>
-                <td className="border border-gray-200 bg-gray-100 text-sm text-center h-8">
+                <td className="spreadsheet-row-header border border-gray-200 bg-gray-100 text-sm text-center h-8">
                   {rowIndex + 1}
                 </td>
                 {Array(26).fill().map((_, colIndex) => {
@@ -925,9 +926,9 @@ return (
                       onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e.shiftKey)}
                       onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
                       onDoubleClick={() => handleCellDoubleClick(rowIndex, colIndex)}
-                      className={`border border-gray-200 px-2 h-8 relative 
-                        ${isSelected ? 'outline outline-2 outline-blue-500' : ''}
-                        ${isInSelectionRange ? 'bg-blue-50' : ''}
+                      className={`spreadsheet-cell border border-gray-200 px-2 h-8 relative 
+                        ${isSelected ? 'spreadsheet-cell-selected outline outline-2 outline-blue-500' : ''}
+                        ${isInSelectionRange ? 'spreadsheet-cell-in-range bg-blue-50' : ''}
                       `}
                       style={cell.style}
                     >

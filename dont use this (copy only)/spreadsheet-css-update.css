@@ -1,0 +1,50 @@
+/* Add these rules to your existing spreadsheet.css file */
+
+/* Make sure container has no overflow */
+.spreadsheet-container {
+  overflow: hidden;
+}
+
+/* Sticky header */
+.spreadsheet-header th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* Corner cell needs higher z-index */
+.spreadsheet-header th:first-child {
+  z-index: 30;
+  left: 0;
+  position: sticky;
+}
+
+/* Sticky row headers */
+.spreadsheet-row-header {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+}
+
+/* Ensure proper positioning when row header cell is selected */
+.spreadsheet-row-header.spreadsheet-cell-selected {
+  z-index: 25;
+}
+
+/* Ensure the table takes enough width to enable horizontal scrolling */
+.spreadsheet-table {
+  min-width: max-content;
+}
+
+/* Update formula bar styling for sticky positioning */
+.formula-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #9ca3af;
+  background-color: white;
+}
