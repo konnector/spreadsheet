@@ -1,0 +1,91 @@
+/* Spreadsheet custom styling */
+.spreadsheet-container {
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  color: #333;
+  user-select: none; /* Prevent text selection */
+}
+
+.spreadsheet-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.spreadsheet-header {
+  background-color: #f3f4f6;
+  font-weight: 500;
+}
+
+.spreadsheet-header th {
+  border: 1px solid #9ca3af; 
+  padding: 8px;
+  height: 32px;
+  text-align: center;
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.spreadsheet-row-header {
+  background-color: #f3f4f6;
+  font-weight: 500;
+  border: 1px solid #9ca3af;
+  text-align: center;
+  color: #374151;
+}
+
+.spreadsheet-cell {
+  border: 1px solid #9ca3af;
+  min-width: 100px;
+  height: 32px;
+  position: relative;
+  padding: 0 8px;
+  background-color: white !important; /* Force white background for all cells */
+  color: #374151;
+}
+
+.spreadsheet-cell-selected {
+  outline: 2px solid #3b82f6;
+  z-index: 10;
+}
+
+.spreadsheet-cell-in-range {
+  background-color: #dbeafe !important; /* Keep the blue selection background */
+}
+
+.spreadsheet-cell-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 0 8px;
+  outline: none;
+  color: #374151;
+  background-color: white;
+  user-select: text; /* Allow text selection when editing */
+}
+
+.formula-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #9ca3af;
+  background-color: white;
+}
+
+.formula-bar-label {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.formula-bar-input {
+  flex: 1;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0 8px;
+  user-select: text; /* Allow text selection in formula bar */
+} 

@@ -1,24 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpreadThem - Interactive Spreadsheet Application
+
+SpreadThem is a feature-rich, web-based spreadsheet application built with Next.js, React, and Tailwind CSS. It provides a familiar spreadsheet experience directly in your browser with a clean, modern interface.
+
+## Features
+
+- **Full Spreadsheet Functionality**: Cell editing, formatting, and navigation
+- **Rich Text Formatting**: Apply bold, italic, underline, and text alignment
+- **Number Formatting**: Support for currency, percentage, and date formats
+- **Selection Tools**: Select individual cells or ranges with keyboard and mouse
+- **Clipboard Operations**: Cut, copy, and paste cells and ranges
+- **AI Assistant**: Get help creating and modifying spreadsheets
+- **Color Formatting**: Apply colors to text and cell backgrounds
+
+## Technology Stack
+
+- **Next.js 15**: Modern React framework with App Router
+- **React 19**: For building a responsive UI
+- **Tailwind CSS**: For styling and responsive design
+- **TypeScript**: For type safety and better developer experience
+- **Lucide Icons**: For beautiful, consistent UI icons
 
 ## Getting Started
 
-First, run the development server:
+First, install the dependencies:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Keyboard Shortcuts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Arrow Keys**: Navigate between cells
+- **Shift + Arrow Keys**: Extend selection
+- **Ctrl + B**: Toggle bold text
+- **Ctrl + I**: Toggle italic text
+- **Ctrl + U**: Toggle underlined text
+- **Ctrl + C**: Copy selected cells
+- **Ctrl + X**: Cut selected cells
+- **Ctrl + V**: Paste from clipboard
+- **Ctrl + A**: Select all cells
+- **Delete**: Clear selected cells
+- **Enter**: Confirm cell edit
+- **Escape**: Cancel cell edit
+
+## Development
+
+This project is structured as follows:
+
+- `src/components/SpreadsheetPreview.tsx`: The main spreadsheet component
+- `src/app/page.tsx`: The main application page
+
+## License
+
+This project is MIT licensed.
 
 ## Learn More
 
