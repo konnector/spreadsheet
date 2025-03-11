@@ -107,16 +107,25 @@ const displayToast = (message) => {
 
 // This function adds a new action to the history
 const addToHistory = (action: HistoryAction) => {
-  setUndoStack(prev => [...prev, action]);
+  setUndoStack(prev => {
+    const newStack = [...prev, action];
+    console.log(`Added to history. Undo stack size: ${newStack.length}. Action: ${action.description}`);
+    return newStack;
+  });
   setRedoStack([]); // Clear redo stack when a new action is performed
 };
 
 // Function to handle undo operation
 const handleUndo = () => {
-  if (undoStack.length === 0) return;
+  console.log(`Undo triggered. Stack size: ${undoStack.length}`);
+  if (undoStack.length === 0) {
+    console.log("Nothing to undo - stack is empty");
+    return;
+  }
   
   // Get the last action from the undo stack
   const actionToUndo = undoStack[undoStack.length - 1];
+  console.log(`Undoing action: ${actionToUndo.description}`);
   
   // Execute its undo function
   actionToUndo.undo();
@@ -904,6 +913,7 @@ useEffect(() => {
     if (ctrlKey) {
       switch (e.key.toLowerCase()) {
         case 'z':
+          console.log("Ctrl+Z detected!");
           e.preventDefault();
           handleUndo();
           break;
