@@ -51,8 +51,15 @@ const handleArrowNavigation = (e) => {
   e.preventDefault();
 };
 
+// This represents a single action that can be undone/redone
+interface HistoryAction {
+  undo: () => void;
+  redo: () => void;
+  description: string; // For debugging and potentially showing in UI
+}
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Bold, Italic, Underline, AlignLeft, AlignCenter, FileSpreadsheet, MessageSquare, Send, X } from 'lucide-react';
+import { Bold, Italic, Underline, AlignLeft, AlignCenter, FileSpreadsheet, MessageSquare, Send, X, RotateCcw, RotateCw } from 'lucide-react';
 
 const WorkingSpreadsheet = () => {
 // Basic state
@@ -74,6 +81,8 @@ const [showChatPanel, setShowChatPanel] = useState(true);
 const [clipboard, setClipboard] = useState([]);
 const [showToast, setShowToast] = useState(null);
 const [isMouseDown, setIsMouseDown] = useState(false);
+const [undoStack, setUndoStack] = useState<HistoryAction[]>([]);
+const [redoStack, setRedoStack] = useState<HistoryAction[]>([]);
 
 // Column and row resizing state
 const [columnWidths, setColumnWidths] = useState(Array(26).fill(100)); // Default 100px width
@@ -94,6 +103,46 @@ const cellInputRef = useRef(null);
 const displayToast = (message) => {
   setShowToast(message);
   setTimeout(() => setShowToast(null), 2000);
+};
+
+// This function adds a new action to the history
+const addToHistory = (action: HistoryAction) => {
+  setUndoStack(prev => [...prev, action]);
+  setRedoStack([]); // Clear redo stack when a new action is performed
+};
+
+// Function to handle undo operation
+const handleUndo = () => {
+  if (undoStack.length === 0) return;
+  
+  // Get the last action from the undo stack
+  const actionToUndo = undoStack[undoStack.length - 1];
+  
+  // Execute its undo function
+  actionToUndo.undo();
+  
+  // Update the stacks
+  setUndoStack(prev => prev.slice(0, prev.length - 1));
+  setRedoStack(prev => [...prev, actionToUndo]);
+  
+  displayToast("Undo: " + actionToUndo.description);
+};
+
+// Function to handle redo operation
+const handleRedo = () => {
+  if (redoStack.length === 0) return;
+  
+  // Get the last action from the redo stack
+  const actionToRedo = redoStack[redoStack.length - 1];
+  
+  // Execute its redo function
+  actionToRedo.redo();
+  
+  // Update the stacks
+  setRedoStack(prev => prev.slice(0, prev.length - 1));
+  setUndoStack(prev => [...prev, actionToRedo]);
+  
+  displayToast("Redo: " + actionToRedo.description);
 };
 
 // Check if a cell is in selection range
@@ -136,6 +185,7 @@ const applyNumberFormat = (format) => {
   if (selectedCell.row === null) return;
   
   const newData = [...spreadsheetData];
+  const affectedCells = [];
   
   if (selectionRange) {
     // Apply to all cells in the selection range
@@ -146,6 +196,14 @@ const applyNumberFormat = (format) => {
     
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
+        // Store old format for history
+        affectedCells.push({
+          row: r,
+          col: c,
+          oldFormat: newData[r][c].format
+        });
+        
+        // Apply new format
         newData[r][c] = {
           ...newData[r][c],
           format
@@ -154,14 +212,54 @@ const applyNumberFormat = (format) => {
     }
   } else {
     // Apply to single cell
-    newData[selectedCell.row][selectedCell.col] = {
-      ...newData[selectedCell.row][selectedCell.col],
+    const r = selectedCell.row;
+    const c = selectedCell.col;
+    
+    // Store old format for history
+    affectedCells.push({
+      row: r,
+      col: c,
+      oldFormat: newData[r][c].format
+    });
+    
+    // Apply new format
+    newData[r][c] = {
+      ...newData[r][c],
       format
     };
   }
   
+  // Create history action
+  const action = {
+    undo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        historyData[cell.row][cell.col] = {
+          ...historyData[cell.row][cell.col],
+          format: cell.oldFormat
+        };
+      });
+      setSpreadsheetData(historyData);
+    },
+    redo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        historyData[cell.row][cell.col] = {
+          ...historyData[cell.row][cell.col],
+          format
+        };
+      });
+      setSpreadsheetData(historyData);
+    },
+    description: `Applied ${format} format`
+  };
+  
+  // Apply changes
   setSpreadsheetData(newData);
   displayToast(`Applied ${format} format`);
+  
+  // Add to history
+  addToHistory(action);
 };
 
 // Cell events
@@ -241,14 +339,44 @@ const handleEditChange = (e) => {
 const saveCell = () => {
   if (selectedCell.row === null || !isEditing) return;
   
+  const oldValue = spreadsheetData[selectedCell.row][selectedCell.col].value;
+  const newValue = editValue;
+  const row = selectedCell.row;
+  const col = selectedCell.col;
+  
+  // Create a history action
+  const action: HistoryAction = {
+    undo: () => {
+      const newData = [...spreadsheetData];
+      newData[row][col] = {
+        ...newData[row][col],
+        value: oldValue
+      };
+      setSpreadsheetData(newData);
+    },
+    redo: () => {
+      const newData = [...spreadsheetData];
+      newData[row][col] = {
+        ...newData[row][col],
+        value: newValue
+      };
+      setSpreadsheetData(newData);
+    },
+    description: `Changed cell ${String.fromCharCode(65 + col)}${row + 1} value`
+  };
+  
+  // Apply the change
   const newData = [...spreadsheetData];
-  newData[selectedCell.row][selectedCell.col] = {
-    ...newData[selectedCell.row][selectedCell.col],
-    value: editValue
+  newData[row][col] = {
+    ...newData[row][col],
+    value: newValue
   };
   
   setSpreadsheetData(newData);
   setIsEditing(false);
+  
+  // Add to history
+  addToHistory(action);
 };
 
 const handleKeyDown = (e) => {
@@ -264,6 +392,8 @@ const handleKeyDown = (e) => {
 const applyFormatting = (property, value) => {
   if (selectedCell.row === null) return;
   
+  // Store information for history
+  const affectedCells = [];
   const newData = [...spreadsheetData];
   
   if (selectionRange) {
@@ -276,6 +406,15 @@ const applyFormatting = (property, value) => {
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const currentStyle = newData[r][c].style || {};
+        
+        // Store old value for history
+        affectedCells.push({
+          row: r,
+          col: c,
+          oldValue: currentStyle[property]
+        });
+        
+        // Apply new value
         newData[r][c] = {
           ...newData[r][c],
           style: {
@@ -287,9 +426,20 @@ const applyFormatting = (property, value) => {
     }
   } else {
     // Apply to single cell
-    const currentStyle = newData[selectedCell.row][selectedCell.col].style || {};
-    newData[selectedCell.row][selectedCell.col] = {
-      ...newData[selectedCell.row][selectedCell.col],
+    const r = selectedCell.row;
+    const c = selectedCell.col;
+    const currentStyle = newData[r][c].style || {};
+    
+    // Store old value for history
+    affectedCells.push({
+      row: r,
+      col: c,
+      oldValue: currentStyle[property]
+    });
+    
+    // Apply new value
+    newData[r][c] = {
+      ...newData[r][c],
       style: {
         ...currentStyle,
         [property]: value
@@ -297,13 +447,51 @@ const applyFormatting = (property, value) => {
     };
   }
   
+  // Create history action
+  const action = {
+    undo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        const currentStyle = historyData[cell.row][cell.col].style || {};
+        historyData[cell.row][cell.col] = {
+          ...historyData[cell.row][cell.col],
+          style: {
+            ...currentStyle,
+            [property]: cell.oldValue
+          }
+        };
+      });
+      setSpreadsheetData(historyData);
+    },
+    redo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        const currentStyle = historyData[cell.row][cell.col].style || {};
+        historyData[cell.row][cell.col] = {
+          ...historyData[cell.row][cell.col],
+          style: {
+            ...currentStyle,
+            [property]: value
+          }
+        };
+      });
+      setSpreadsheetData(historyData);
+    },
+    description: `Applied ${property} formatting`
+  };
+  
+  // Apply the change
   setSpreadsheetData(newData);
+  
+  // Add to history
+  addToHistory(action);
 };
 
 const toggleFormatting = (property, value) => {
   if (selectedCell.row === null) return;
   
   const newData = [...spreadsheetData];
+  const affectedCells = [];
   
   if (selectionRange) {
     // Toggle for all cells in selection
@@ -329,22 +517,44 @@ const toggleFormatting = (property, value) => {
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const currentStyle = newData[r][c].style || {};
+        const newValue = anyHasFormatting ? undefined : value;
+        
+        // Store old and new values for history
+        affectedCells.push({
+          row: r,
+          col: c,
+          oldValue: currentStyle[property],
+          newValue: newValue
+        });
+        
+        // Apply the change
         newData[r][c] = {
           ...newData[r][c],
           style: {
             ...currentStyle,
-            [property]: anyHasFormatting ? undefined : value
+            [property]: newValue
           }
         };
       }
     }
   } else {
     // Toggle for single cell
-    const currentStyle = spreadsheetData[selectedCell.row][selectedCell.col].style || {};
+    const r = selectedCell.row;
+    const c = selectedCell.col;
+    const currentStyle = spreadsheetData[r][c].style || {};
     const newValue = currentStyle[property] === value ? undefined : value;
     
-    newData[selectedCell.row][selectedCell.col] = {
-      ...newData[selectedCell.row][selectedCell.col],
+    // Store old and new values for history
+    affectedCells.push({
+      row: r,
+      col: c,
+      oldValue: currentStyle[property],
+      newValue: newValue
+    });
+    
+    // Apply the change
+    newData[r][c] = {
+      ...newData[r][c],
       style: {
         ...currentStyle,
         [property]: newValue
@@ -352,7 +562,44 @@ const toggleFormatting = (property, value) => {
     };
   }
   
+  // Create history action
+  const action = {
+    undo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        const currentStyle = historyData[cell.row][cell.col].style || {};
+        historyData[cell.row][cell.col] = {
+          ...historyData[cell.row][cell.col],
+          style: {
+            ...currentStyle,
+            [property]: cell.oldValue
+          }
+        };
+      });
+      setSpreadsheetData(historyData);
+    },
+    redo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        const currentStyle = historyData[cell.row][cell.col].style || {};
+        historyData[cell.row][cell.col] = {
+          ...historyData[cell.row][cell.col],
+          style: {
+            ...currentStyle,
+            [property]: cell.newValue
+          }
+        };
+      });
+      setSpreadsheetData(historyData);
+    },
+    description: `Toggled ${property} formatting`
+  };
+  
+  // Apply the changes
   setSpreadsheetData(newData);
+  
+  // Add to history
+  addToHistory(action);
 };
 
 // Clipboard operations
@@ -387,35 +634,90 @@ const copySelection = () => {
 const cutSelection = () => {
   if (selectedCell.row === null) return;
   
-  // First copy
-  copySelection();
-  
-  // Then clear the selected cells
+  let dataToCopy = [];
+  let affectedCells = [];
   const newData = [...spreadsheetData];
   
   if (selectionRange) {
+    // Cut range of cells
     const startRow = Math.min(selectionRange.startRow, selectionRange.endRow);
     const endRow = Math.max(selectionRange.startRow, selectionRange.endRow);
     const startCol = Math.min(selectionRange.startCol, selectionRange.endCol);
     const endCol = Math.max(selectionRange.startCol, selectionRange.endCol);
     
     for (let r = startRow; r <= endRow; r++) {
+      const rowData = [];
       for (let c = startCol; c <= endCol; c++) {
+        // Save for clipboard
+        rowData.push({...spreadsheetData[r][c]});
+        
+        // Store old data for history
+        affectedCells.push({
+          row: r,
+          col: c,
+          oldValue: {...spreadsheetData[r][c]}
+        });
+        
+        // Clear the cell
         newData[r][c] = {
           ...newData[r][c],
           value: ''
         };
       }
+      dataToCopy.push(rowData);
     }
   } else {
+    // Cut single cell
+    dataToCopy = [[{...spreadsheetData[selectedCell.row][selectedCell.col]}]];
+    
+    // Store old data for history
+    affectedCells.push({
+      row: selectedCell.row,
+      col: selectedCell.col,
+      oldValue: {...spreadsheetData[selectedCell.row][selectedCell.col]}
+    });
+    
+    // Clear the cell
     newData[selectedCell.row][selectedCell.col] = {
       ...newData[selectedCell.row][selectedCell.col],
       value: ''
     };
   }
   
+  // Create a deep copy of dataToCopy for history
+  const copiedData = JSON.parse(JSON.stringify(dataToCopy));
+  
+  // Create history action
+  const action = {
+    undo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        historyData[cell.row][cell.col] = {...cell.oldValue};
+      });
+      setSpreadsheetData(historyData);
+      // Don't restore clipboard as that would be confusing
+    },
+    redo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        historyData[cell.row][cell.col] = {
+          ...historyData[cell.row][cell.col],
+          value: ''
+        };
+      });
+      setSpreadsheetData(historyData);
+      setClipboard(JSON.parse(JSON.stringify(copiedData)));
+    },
+    description: "Cut selection"
+  };
+  
+  // Apply changes
   setSpreadsheetData(newData);
+  setClipboard(dataToCopy);
   displayToast("Cut to clipboard");
+  
+  // Add to history
+  addToHistory(action);
 };
 
 const pasteFromClipboard = () => {
@@ -426,6 +728,9 @@ const pasteFromClipboard = () => {
   const pasteHeight = pasteData.length;
   const pasteWidth = pasteData[0].length;
   
+  // Store affected cells for history
+  const affectedCells = [];
+  
   // Paste starting from the selected cell
   for (let r = 0; r < pasteHeight; r++) {
     const targetRow = selectedCell.row + r;
@@ -435,6 +740,15 @@ const pasteFromClipboard = () => {
       const targetCol = selectedCell.col + c;
       if (targetCol >= newData[0].length) continue;
       
+      // Store old data for history
+      affectedCells.push({
+        row: targetRow,
+        col: targetCol,
+        oldValue: {...newData[targetRow][targetCol]},
+        newValue: {...pasteData[r][c]}
+      });
+      
+      // Apply paste
       newData[targetRow][targetCol] = {
         ...newData[targetRow][targetCol],
         ...pasteData[r][c]
@@ -442,8 +756,34 @@ const pasteFromClipboard = () => {
     }
   }
   
+  // Create history action
+  const action = {
+    undo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        historyData[cell.row][cell.col] = {...cell.oldValue};
+      });
+      setSpreadsheetData(historyData);
+    },
+    redo: () => {
+      const historyData = [...spreadsheetData];
+      affectedCells.forEach(cell => {
+        historyData[cell.row][cell.col] = {
+          ...historyData[cell.row][cell.col],
+          ...cell.newValue
+        };
+      });
+      setSpreadsheetData(historyData);
+    },
+    description: "Paste from clipboard"
+  };
+  
+  // Apply changes
   setSpreadsheetData(newData);
   displayToast("Pasted from clipboard");
+  
+  // Add to history
+  addToHistory(action);
 };
 
 const selectAll = () => {
@@ -489,6 +829,7 @@ useEffect(() => {
       e.preventDefault();
       
       const newData = [...spreadsheetData];
+      const affectedCells = [];
       
       if (selectionRange) {
         const startRow = Math.min(selectionRange.startRow, selectionRange.endRow);
@@ -498,6 +839,14 @@ useEffect(() => {
         
         for (let r = startRow; r <= endRow; r++) {
           for (let c = startCol; c <= endCol; c++) {
+            // Store old data for history
+            affectedCells.push({
+              row: r,
+              col: c,
+              oldValue: {...newData[r][c]}
+            });
+            
+            // Clear cell
             newData[r][c] = {
               ...newData[r][c],
               value: ''
@@ -505,20 +854,63 @@ useEffect(() => {
           }
         }
       } else {
+        // Store old data for history
+        affectedCells.push({
+          row: selectedCell.row,
+          col: selectedCell.col,
+          oldValue: {...newData[selectedCell.row][selectedCell.col]}
+        });
+        
+        // Clear cell
         newData[selectedCell.row][selectedCell.col] = {
           ...newData[selectedCell.row][selectedCell.col],
           value: ''
         };
       }
       
+      // Create history action
+      const action = {
+        undo: () => {
+          const historyData = [...spreadsheetData];
+          affectedCells.forEach(cell => {
+            historyData[cell.row][cell.col] = {...cell.oldValue};
+          });
+          setSpreadsheetData(historyData);
+        },
+        redo: () => {
+          const historyData = [...spreadsheetData];
+          affectedCells.forEach(cell => {
+            historyData[cell.row][cell.col] = {
+              ...historyData[cell.row][cell.col],
+              value: ''
+            };
+          });
+          setSpreadsheetData(historyData);
+        },
+        description: "Cleared cells"
+      };
+      
+      // Apply changes
       setSpreadsheetData(newData);
       displayToast("Cleared cells");
+      
+      // Add to history
+      addToHistory(action);
+      
       return;
     }
     
     // Handle Ctrl+key shortcuts
     if (ctrlKey) {
       switch (e.key.toLowerCase()) {
+        case 'z':
+          e.preventDefault();
+          handleUndo();
+          break;
+        case 'y':
+          e.preventDefault();
+          handleRedo();
+          break;
         case 'b':
           e.preventDefault();
           toggleFormatting('fontWeight', 'bold');
@@ -555,7 +947,7 @@ useEffect(() => {
   
   window.addEventListener('keydown', handleKeyboardShortcuts);
   return () => window.removeEventListener('keydown', handleKeyboardShortcuts);
-}, [isEditing, selectedCell, selectionRange, spreadsheetData, clipboard]);
+}, [isEditing, selectedCell, selectionRange, spreadsheetData, clipboard, undoStack, redoStack]);
 
 // Chat message component
 const ChatMessage = ({ message, sender, isBot }) => (
@@ -728,6 +1120,26 @@ return (
       
       {/* Toolbar */}
       <div className="border-b p-2 flex flex-wrap gap-1 bg-white sticky top-0 z-20">
+        {/* Undo/Redo buttons */}
+        <div className="flex border-r pr-2 mr-2">
+          <button 
+            className={`p-1 rounded ${undoStack.length === 0 ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+            onClick={handleUndo}
+            disabled={undoStack.length === 0}
+            title="Undo (Ctrl+Z)"
+          >
+            <RotateCcw size={16} />
+          </button>
+          <button 
+            className={`p-1 rounded ${redoStack.length === 0 ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+            onClick={handleRedo}
+            disabled={redoStack.length === 0}
+            title="Redo (Ctrl+Y)"
+          >
+            <RotateCw size={16} />
+          </button>
+        </div>
+        
         {/* Text styles */}
         <div className="flex border-r pr-2 mr-2">
           <button 
